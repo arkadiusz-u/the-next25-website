@@ -1,0 +1,28 @@
+name: Deploy
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare site files
+        run: |
+          mkdir dist
+          rsync -a \
+            --exclude README.md \
+            --exclude PAGES.csv \
+            --exclude .DS_Store \
+            site/ dist/
+          cp config/_headers dist/ 2>/dev/null || true
+          cp config/_redirects dist/ 2>/dev/null || true
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=the-next-25 --branch=${{ github.ref_name }}
